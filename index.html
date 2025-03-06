@@ -11,6 +11,24 @@
             box-sizing: border-box;
         }
 
+        :root {
+            --bg-color: #f5f5f5;
+            --text-color: #333;
+            --timer-color: #2c3e50;
+            --border-color: #eee;
+            --input-border: #ccc;
+            --shortcut-color: #666;
+        }
+
+        [data-theme="dark"] {
+            --bg-color: #1a1a1a;
+            --text-color: #fff;
+            --timer-color: #ecf0f1;
+            --border-color: #333;
+            --input-border: #444;
+            --shortcut-color: #999;
+        }
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen,
                 Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
@@ -19,21 +37,36 @@
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            background-color: #f5f5f5;
+            background-color: var(--bg-color);
+            transition: background-color 0.3s ease;
         }
 
         .title {
             font-size: 2.5rem;
-            color: #333;
+            color: var(--text-color);
             margin-bottom: 2rem;
+            transition: color 0.3s ease;
         }
 
         .timer {
             font-size: 4rem;
             font-weight: bold;
-            color: #2c3e50;
+            color: var(--timer-color);
             font-family: monospace;
             margin-bottom: 2rem;
+            transition: color 0.3s ease;
+            animation: pulse 1s infinite ease-in-out;
+            animation-play-state: paused;
+        }
+
+        .timer.running {
+            animation-play-state: running;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+            100% { transform: scale(1); }
         }
 
         .buttons {
@@ -66,24 +99,177 @@
         .reset:hover {
             background-color: #c0392b;
         }
+
+        .theme-switch {
+            position: fixed;
+            top: 1rem;
+            right: 8rem;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0.5rem;
+            color: var(--text-color);
+            font-size: 1.5rem;
+            transition: transform 0.3s ease;
+        }
+
+        .theme-switch:hover {
+            transform: rotate(180deg);
+        }
+
+        .mode-switch {
+            margin-bottom: 1rem;
+            color: var(--text-color);
+            transition: color 0.3s ease;
+        }
+
+        .input-time {
+            display: none;
+            margin-bottom: 1rem;
+        }
+
+        .input-time.visible {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .input-time input {
+            width: 60px;
+            padding: 0.5rem;
+            border: 1px solid var(--input-border);
+            border-radius: 4px;
+            font-size: 1rem;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            transition: all 0.3s ease;
+        }
+
+        .lap-times {
+            margin-top: 1rem;
+            max-height: 200px;
+            overflow-y: auto;
+            width: 300px;
+            display: none;
+            color: var(--text-color);
+            transition: all 0.3s ease;
+        }
+
+        .lap-times.visible {
+            display: block;
+        }
+
+        .lap-item {
+            padding: 0.5rem;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            transition: all 0.3s ease;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .lap-item:last-child {
+            border-bottom: none;
+        }
+
+        .lap {
+            background-color: #3498db;
+        }
+
+        .lap:hover {
+            background-color: #2980b9;
+        }
+
+        .lap.hidden {
+            display: none;
+        }
+
+        .lang-switch {
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+            background: none;
+            border: 1px solid var(--text-color);
+            border-radius: 4px;
+            cursor: pointer;
+            padding: 0.3rem 0.6rem;
+            color: var(--text-color);
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        .lang-switch:hover {
+            background-color: var(--text-color);
+            color: var(--bg-color);
+        }
+
+        .lang-switch .icon {
+            font-size: 1.2rem;
+        }
     </style>
 </head>
 <body>
+    <button class="lang-switch" id="langSwitch">
+        <span class="icon">🌐</span>
+        <span class="text">EN</span>
+    </button>
+    <button class="theme-switch" id="themeSwitch">🌓</button>
     <h1 class="title">计时器</h1>
+    
+    <div class="mode-switch">
+        <label>
+            <input type="radio" name="mode" value="stopwatch" checked> 正计时
+        </label>
+        <label>
+            <input type="radio" name="mode" value="countdown"> 倒计时
+        </label>
+    </div>
+
+    <div class="input-time" id="timeInput">
+        <input type="number" id="hours" min="0" max="99" placeholder="时">
+        <input type="number" id="minutes" min="0" max="59" placeholder="分">
+        <input type="number" id="seconds" min="0" max="59" placeholder="秒">
+    </div>
+
     <div class="timer" id="timer">00:00:00</div>
     <div class="buttons">
         <button class="button start" id="startPause">开始</button>
+        <button class="button lap hidden" id="lap">计次</button>
         <button class="button reset" id="reset">重置</button>
     </div>
+
+    <div class="lap-times" id="lapTimes"></div>
 
     <script>
         let time = 0;
         let isRunning = false;
         let intervalId = null;
+        let isCountdown = false;
+        let initialTime = 0;
+        let lapTimes = [];
+        let lapCounter = 1;
 
         const timerElement = document.getElementById('timer');
         const startPauseButton = document.getElementById('startPause');
         const resetButton = document.getElementById('reset');
+        const timeInput = document.getElementById('timeInput');
+        const modeInputs = document.getElementsByName('mode');
+        const lapButton = document.getElementById('lap');
+        const lapTimesContainer = document.getElementById('lapTimes');
+        const beepSound = new Audio('data:audio/wav;base64,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qJrx4KOQjahZxWbcZgztj2c49nKmkId44S71j0c8eV9yDK6uPRzx5X18eDvjvQ6yKo9ZSS6l//8elePK/Lf//IInrOF/FvDoADYAGBMGb7FtErm5MXMlmPAJQVgWta7Zx2go+8xJ0UiCb8LHHdftWyLJE0QIAIsI+UbXu67dZMjmgDGCGl1H+vpF4NSDckSIkk7Vd+sxEhBQMRU8j/12UIRhzSaUdQ+rQU5kGeFxm+hb1oh6pWWmv3uvmReDl0UnvtapVaIzo1jZbf/pD6ElLqSX+rUmOQNpJFa/r+sa4e/pBlAABoAAAAA3CUgShLdGIxsY7AUABPRrgCABdDuQ5GC7DqPQCgbbJUAoRSUj+NIEig0YfyWUho1VBBBA//uQZB4ABZx5zfMakeAAAAmwAAAAF5F3P0w9GtAAACfAAAAAwLhMDmAYWMgVEG1U0FIGCBgXBXAtfMH10000EEEEEECUBYln03TTTdNBDZopopYvrTTdNa325mImNg3TTPV9q3pmY0xoO6bv3r00y+IDGid/9aaaZTGMuj9mpu9Mpio1dXrr5HERTZSmqU36A3CumzN/9Robv/Xx4v9ijkSRSNLQhAWumap82WRSBUqXStV/YcS+XVLnSS+WLDroqArFkMEsAS+eWmrUzrO0oEmE40RlMZ5+ODIkAyKAGUwZ3mVKmcamcJnMW26MRPgUw6j+LkhyHGVGYjSUUKNpuJUQoOIAyDvEyG8S5yfK6dhZc0Tx1KI/gviKL6qvvFs1+bWtaz58uUNnryq6kt5RzOCkPWlVqVX2a/EEBUdU1KrXLf40GoiiFXK///qpoiDXrOgqDR38JB0bw7SoL+ZB9o1RCkQjQ2CBYZKd/+VJxZRRZlqSkKiws0WFxUyCwsKiMy7hUVFhIaCrNQsKkTIsLivwKKigsj8XYlwt/WKi2N4d//uQRCSAAjURNIHpMZBGYiaQPSYyAAABLAAAAAAAACWAAAAApUF/Mg+0aohSIRobBAsMlO//Kk4soosy1JSFRYWaLC4qZBYWFRGZdwqKiwkNBVmoWFSJkWFxX4FFRQWR+LsS4W/rFRb/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////VEFHAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAU291bmRib3kuZGUAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMjAwNGh0dHA6Ly93d3cuc291bmRib3kuZGUAAAAAAAAAACU=');
 
         function formatTime(timeInSeconds) {
             const hours = Math.floor(timeInSeconds / 3600);
@@ -96,31 +282,218 @@
             timerElement.textContent = formatTime(time);
         }
 
+        function setCountdownTime() {
+            const hours = parseInt(document.getElementById('hours').value) || 0;
+            const minutes = parseInt(document.getElementById('minutes').value) || 0;
+            const seconds = parseInt(document.getElementById('seconds').value) || 0;
+            time = hours * 3600 + minutes * 60 + seconds;
+            initialTime = time;
+            updateTimer();
+        }
+
+        function playBeep() {
+            beepSound.play();
+        }
+
+        function addLap() {
+            if (!isRunning || isCountdown) return;
+            
+            const lapTime = time;
+            const previousLap = lapTimes[lapTimes.length - 1] || 0;
+            const lapDuration = lapTime - previousLap;
+            
+            const lapItem = document.createElement('div');
+            lapItem.className = 'lap-item';
+            lapItem.innerHTML = `
+                <span>${translations[currentLang].lapText} ${lapCounter}</span>
+                <span>${formatTime(lapDuration)}</span>
+            `;
+            
+            lapTimesContainer.insertBefore(lapItem, lapTimesContainer.firstChild);
+            lapTimes.push(lapTime);
+            lapCounter++;
+        }
+
+        function resetTimer() {
+            isRunning = false;
+            clearInterval(intervalId);
+            startPauseButton.textContent = translations[currentLang].start;
+            updateTimerAnimation(false);
+            if (isCountdown) {
+                setCountdownTime();
+            } else {
+                time = 0;
+                lapTimes = [];
+                lapCounter = 1;
+                lapTimesContainer.innerHTML = '';
+                updateTimer();
+            }
+            lapButton.classList.add('hidden');
+            lapTimesContainer.classList.remove('visible');
+        }
+
+        function updateTimerAnimation(running) {
+            timerElement.classList.toggle('running', running);
+        }
+
+        function handleModeChange(e) {
+            isCountdown = e.target.value === 'countdown';
+            timeInput.classList.toggle('visible', isCountdown);
+            lapButton.classList.add('hidden');
+            lapTimesContainer.classList.remove('visible');
+            resetTimer();
+        }
+
+        modeInputs.forEach(input => {
+            input.addEventListener('change', handleModeChange);
+        });
+
         startPauseButton.addEventListener('click', () => {
             if (!isRunning) {
-                // 开始计时
+                if (isCountdown && time === 0) return;
                 isRunning = true;
-                startPauseButton.textContent = '暂停';
+                startPauseButton.textContent = translations[currentLang].pause;
+                updateTimerAnimation(true);
+                if (!isCountdown) {
+                    lapButton.classList.remove('hidden');
+                    lapTimesContainer.classList.add('visible');
+                }
                 intervalId = setInterval(() => {
-                    time++;
+                    if (isCountdown) {
+                        time--;
+                        if (time < 0) {
+                            resetTimer();
+                            showCountdownEnd();
+                            return;
+                        }
+                    } else {
+                        time++;
+                    }
                     updateTimer();
                 }, 1000);
             } else {
-                // 暂停计时
                 isRunning = false;
-                startPauseButton.textContent = '开始';
+                startPauseButton.textContent = translations[currentLang].start;
+                updateTimerAnimation(false);
                 clearInterval(intervalId);
             }
         });
 
-        resetButton.addEventListener('click', () => {
-            // 重置计时器
-            isRunning = false;
-            time = 0;
-            startPauseButton.textContent = '开始';
-            clearInterval(intervalId);
-            updateTimer();
+        lapButton.addEventListener('click', addLap);
+        resetButton.addEventListener('click', resetTimer);
+
+        const themeSwitch = document.getElementById('themeSwitch');
+        const prefersDarkScheme = window.matchMedia('(prefers-color-scheme: dark)');
+        
+        const currentTheme = localStorage.getItem('theme');
+        if (currentTheme) {
+            document.documentElement.setAttribute('data-theme', currentTheme);
+        } else if (prefersDarkScheme.matches) {
+            document.documentElement.setAttribute('data-theme', 'dark');
+        }
+
+        themeSwitch.addEventListener('click', () => {
+            let theme = document.documentElement.getAttribute('data-theme');
+            let newTheme = theme === 'dark' ? 'light' : 'dark';
+            
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
         });
+
+        const translations = {
+            en: {
+                title: 'Timer',
+                start: 'Start',
+                pause: 'Pause',
+                reset: 'Reset',
+                lap: 'Lap',
+                stopwatch: 'Stopwatch',
+                countdown: 'Countdown',
+                hours: 'Hours',
+                minutes: 'Minutes',
+                seconds: 'Seconds',
+                lapText: 'Lap',
+                countdownEnd: 'Countdown finished!'
+            },
+            zh: {
+                title: '计时器',
+                start: '开始',
+                pause: '暂停',
+                reset: '重置',
+                lap: '计次',
+                stopwatch: '正计时',
+                countdown: '倒计时',
+                hours: '时',
+                minutes: '分',
+                seconds: '秒',
+                lapText: '计次',
+                countdownEnd: '倒计时结束！'
+            }
+        };
+
+        // 获取浏览器语言
+        function getBrowserLang() {
+            const browserLang = navigator.language.toLowerCase().split('-')[0];
+            // 检查是否支持该语言
+            return Object.keys(translations).includes(browserLang) ? browserLang : 'en';
+        }
+
+        // 初始化语言：优先使用本地存储的语言，其次是浏览器语言，最后默认英语
+        let currentLang = localStorage.getItem('lang') || getBrowserLang();
+        const langSwitch = document.getElementById('langSwitch');
+
+        function updateLangButton() {
+            langSwitch.querySelector('.text').textContent = currentLang === 'zh' ? 'EN' : '中';
+        }
+
+        function updatePageText() {
+            const t = translations[currentLang];
+            document.querySelector('.title').textContent = t.title;
+            startPauseButton.textContent = isRunning ? t.pause : t.start;
+            resetButton.textContent = t.reset;
+            lapButton.textContent = t.lap;
+            
+            const modeLabels = document.querySelectorAll('.mode-switch label');
+            modeLabels.forEach(label => {
+                const input = label.querySelector('input');
+                if (input.value === 'stopwatch') {
+                    label.innerHTML = `<input type="radio" name="mode" value="stopwatch"${!isCountdown ? ' checked' : ''}> ${t.stopwatch}`;
+                } else {
+                    label.innerHTML = `<input type="radio" name="mode" value="countdown"${isCountdown ? ' checked' : ''}> ${t.countdown}`;
+                }
+            });
+
+            document.querySelectorAll('.mode-switch input').forEach(input => {
+                input.addEventListener('change', handleModeChange);
+            });
+
+            document.getElementById('hours').placeholder = t.hours;
+            document.getElementById('minutes').placeholder = t.minutes;
+            document.getElementById('seconds').placeholder = t.seconds;
+
+            document.querySelectorAll('.lap-item').forEach(item => {
+                const [num, time] = item.textContent.trim().split(' ')[1].split('\n');
+                item.innerHTML = `
+                    <span>${t.lapText} ${num}</span>
+                    <span>${time}</span>
+                `;
+            });
+        }
+
+        langSwitch.addEventListener('click', () => {
+            currentLang = currentLang === 'zh' ? 'en' : 'zh';
+            localStorage.setItem('lang', currentLang);
+            updateLangButton();
+            updatePageText();
+        });
+
+        updateLangButton();
+        updatePageText();
+
+        function showCountdownEnd() {
+            playBeep();
+            alert(translations[currentLang].countdownEnd);
+        }
     </script>
 </body>
 </html> 
