@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>计时器</title>
+    <title></title>
     <style>
         * {
             margin: 0;
@@ -198,33 +198,46 @@
             position: fixed;
             top: 1rem;
             right: 1rem;
-            background: none;
+            background: var(--bg-color);
             border: 1px solid var(--text-color);
             border-radius: 4px;
             cursor: pointer;
-            padding: 0.3rem 0.6rem;
+            padding: 0;
             color: var(--text-color);
             font-size: 0.9rem;
             transition: all 0.3s ease;
+            overflow: hidden;
             display: flex;
-            align-items: center;
-            gap: 0.3rem;
         }
 
-        .lang-switch:hover {
+        .lang-switch span {
+            padding: 0.3rem 0.6rem;
+        }
+
+        .lang-switch span:first-child {
             background-color: var(--text-color);
             color: var(--bg-color);
         }
 
-        .lang-switch .icon {
-            font-size: 1.2rem;
+        .lang-switch span:last-child {
+            background-color: transparent;
+        }
+
+        .lang-switch:hover span:first-child {
+            background-color: transparent;
+            color: var(--text-color);
+        }
+
+        .lang-switch:hover span:last-child {
+            background-color: var(--text-color);
+            color: var(--bg-color);
         }
     </style>
 </head>
 <body>
     <button class="lang-switch" id="langSwitch">
-        <span class="icon">🌐</span>
-        <span class="text">EN</span>
+        <span>中</span>
+        <span>EN</span>
     </button>
     <button class="theme-switch" id="themeSwitch">🌓</button>
     <h1 class="title">计时器</h1>
@@ -443,11 +456,23 @@
         const langSwitch = document.getElementById('langSwitch');
 
         function updateLangButton() {
-            langSwitch.querySelector('.text').textContent = currentLang === 'zh' ? 'EN' : '中';
+            const spans = langSwitch.querySelectorAll('span');
+            if (currentLang === 'zh') {
+                spans[0].style.backgroundColor = 'var(--text-color)';
+                spans[0].style.color = 'var(--bg-color)';
+                spans[1].style.backgroundColor = 'transparent';
+                spans[1].style.color = 'var(--text-color)';
+            } else {
+                spans[0].style.backgroundColor = 'transparent';
+                spans[0].style.color = 'var(--text-color)';
+                spans[1].style.backgroundColor = 'var(--text-color)';
+                spans[1].style.color = 'var(--bg-color)';
+            }
         }
 
         function updatePageText() {
             const t = translations[currentLang];
+            document.title = t.title;
             document.querySelector('.title').textContent = t.title;
             startPauseButton.textContent = isRunning ? t.pause : t.start;
             resetButton.textContent = t.reset;
@@ -494,6 +519,11 @@
             playBeep();
             alert(translations[currentLang].countdownEnd);
         }
+
+        // 确保在 DOM 加载完成后更新标题
+        document.addEventListener('DOMContentLoaded', () => {
+            updatePageText();
+        });
     </script>
 </body>
 </html> 
